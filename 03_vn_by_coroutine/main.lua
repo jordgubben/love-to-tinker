@@ -4,7 +4,8 @@
 
 
 -- Global state (sue me, or don't).
-message = ""
+queuedUiElements = {}
+activeUiElements = {}
 
 
 -- Where are we?
@@ -29,11 +30,37 @@ function log_info( msg ) log_internal( "INFO", msg ) end
 function log_error( msg ) log_internal( "ERROR", msg ) end
 
 
+-- Enqueue UI element.
+function push_uiElement ( element )
+	table.insert( queuedUiElements, element )
+end
 
--- Display a text message (without options).
-function showMessage( msg )
+
+-- Show all elements (assumes coroutine).
+function show_uiElements ()
+	coroutine.yield( queuedUiElements )
+	queuedUiElements = {}
+end
+
+
+-- Present additional info.
+function push_infoBox ( msg )
 	log_info( msg )
-	coroutine.yield( msg )
+	push_uiElement { type = "info", text = msg }
+end
+
+
+-- Present message in the typical VN way.
+function push_messageBox ( msg )
+	log_info( msg )
+	push_uiElement { text = msg }
+end
+
+
+-- Display a text message (without options) along with everything pushed.
+function show_messageBox( msg )
+	push_messageBox( msg )
+	show_uiElements()
 end
 
 
@@ -41,9 +68,10 @@ end
 plot = coroutine.wrap( function ()
 	log_info( "Hello, Coroutine!")
 
-	showMessage( "Greetings!" )
-	showMessage( "How do you do?" )
-	showMessage( "That's good to hear!" )
+	show_messageBox( "Greetings!" )
+	show_messageBox( "How do you do?" )
+	push_infoBox( "You suspect they're just being polite." )
+	show_messageBox( "That's good to hear!" )
 
 	log_info( "That's it!")
 end)
@@ -61,40 +89,79 @@ function forwardPlot ()
 		log_error( result )
 	elseif result then
 		log_info( string.format("Progress: '%s'", result ) )
-		message = result
+		activeUiElements = result
 	else
 		log_info( "Concluded!")
-		message = ""
+		activeUiElements = {}
 		plot = nil
 	end
 end
 
 
--- Redner text box at the bottom of the application window.
-function drawMessageBox()
+-- Render additional information at the top of the screen.
+function draw_infoBox_ui( message )
 	local g = love.graphics
-	local winWidth, winHeight = g.getDimensions()
-	local boxLeft, boxTop, boxRight, boxBottom =
-		64, winHeight - 192, winWidth - 64, winHeight - 32
-	local textLeft, textTop =
-		boxLeft + 24, boxTop + 24
+	local win_w, win_h = g.getDimensions()
+	local box_left, box_top, box_right, box_bottom =
+		64, 32, win_w - 64, 32 + 64
+	local text_x, text_y =
+		box_left + 24, box_top + 24
 
 	-- Box back
 	g.setLineWidth( 6 )
-	g.setColor( 0.5, 0.8, 0.8, 0.5)
+	g.setColor( 0.3, 0.6, 0.9, 0.5 )
+	g.rectangle( "line"
+		, box_left, box_top
+		, box_right - box_left, box_bottom - box_top )
+	g.setColor( 0.1, 0.4, 0.8, 0.5 )
 	g.rectangle( "fill"
-		, boxLeft, boxTop
-		, boxRight - boxLeft, boxBottom - boxTop )
+		, box_left, box_top
+		, box_right - box_left, box_bottom - box_top )
 
 	-- Text message
 	g.setColor( 1, 1, 1, 1)
 	g.push()
-	g.translate( textLeft, textTop )
+	g.translate( text_x, text_y )
+	g.scale( 1.5 )
+	g.print( message, 0, 0 )
+	g.pop()
+end
+
+
+-- Render text box at the bottom of the application window.
+function draw_messageBox_ui ( message )
+	local g = love.graphics
+	local win_w, win_h = g.getDimensions()
+	local box_left, box_top, box_right, box_bottom =
+		64, win_h - 192, win_w - 64, win_h - 32
+	local text_x, text_y =
+		box_left + 24, box_top + 24
+
+	-- Box back
+	g.setLineWidth( 6 )
+	g.setColor( 0.1, 0.8, 0.4, 0.5 )
+	g.rectangle( "fill"
+		, box_left, box_top
+		, box_right - box_left, box_bottom - box_top )
+
+	-- Text message
+	g.setColor( 1, 1, 1, 1 )
+	g.push()
+	g.translate( text_x, text_y )
 	g.scale( 2 )
 	g.print( message, 0, 0 )
 	g.pop()
 end
 
+
+-- Draw whatever UI element was provided.
+function draw_uiElement ( element )
+	if element.type == "info" then
+		draw_infoBox_ui( element.text )
+	else
+		draw_messageBox_ui( element.text )
+	end
+end
 
 ------------------------------------------------------------
 ---- ---- ----     Löve2D framework hooks     ---- ---- ----
@@ -102,7 +169,7 @@ end
 ------------------------------------------------------------
 
 
--- Inital initalizatons.
+-- Initial initialization.
 function love.load ()
 	forwardPlot()
 end
@@ -126,5 +193,7 @@ end
 
 -- Render every frame.
 function love.draw ()
-	drawMessageBox()
+	for _, element in ipairs( activeUiElements ) do
+		draw_uiElement( element )
+	end
 end
