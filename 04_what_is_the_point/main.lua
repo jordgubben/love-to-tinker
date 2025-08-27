@@ -7,13 +7,18 @@
 
 
 ----------------------------------------------------------------
--- Global state (sue me not, I'm not Sue)
-points = { } 
+---- Configuration
+selectionLimit = 16
+
+
+----------------------------------------------------------------
+---- Global state (sue me not, I'm not Sue)
+points = { }
 selectedPoint = nil
 
 
 ----------------------------------------------------------------
---- Logging
+---- Logging
 
 -- Where are we?
 --
@@ -38,7 +43,7 @@ function log_error( msg ) log_internal( "ERROR", msg ) end
 
 
 ----------------------------------------------------------------
---- Points
+---- Points
 
 -- Set up a grid of points just to get going
 function make_initialPoints()
@@ -51,8 +56,13 @@ end
 
 
 -- Select the point among the points closest to the given position.
+--
+-- Limit selection to point close enough,
+-- and clear selction if nothing was close enough.
+--
 function select_closestPoint( sx, sy)
-	local bestDistance = math.huge
+	local bestDistance = selectionLimit * selectionLimit
+	selectedPoint = nil
 
 	for _, point in ipairs( points ) do
 		local px, py = unpack( point )
@@ -76,7 +86,8 @@ end
 
 
 ------------------------------------------------------------
---- Löve2D framework hooks
+---- Löve2D framework hooks
+---- (may be left empty for easy access)
 
 -- Initial initialization.
 function love.load ()
