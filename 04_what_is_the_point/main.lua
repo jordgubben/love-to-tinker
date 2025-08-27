@@ -1,10 +1,16 @@
 -- [[ Vector tool vaugly inspired by 'Sketchpad']]
 --
--- Naming convention: field names use lower camel case, with underscore for prefix and suffix categorization.
+-- Naming convention:
+-- Field names use lower camel case.
+-- Underscore for prefix and suffix categorization.
+-- (it somwhow made sense at the time)
 
 
+----------------------------------------------------------------
 -- Global state (sue me not, I'm not Sue)
 points = { } 
+selectedPoint = nil
+
 
 ----------------------------------------------------------------
 --- Logging
@@ -30,6 +36,7 @@ end
 function log_info( msg ) log_internal( "INFO", msg ) end
 function log_error( msg ) log_internal( "ERROR", msg ) end
 
+
 ----------------------------------------------------------------
 --- Points
 
@@ -38,6 +45,22 @@ function make_initialPoints()
 	for x = 50, 750, 100 do
 		for y = 50, 550, 100 do
 			table.insert( points, { x, y } )
+		end
+	end
+end
+
+
+-- Select the point among the points closest to the given position.
+function select_closestPoint( sx, sy)
+	local bestDistance = math.huge
+
+	for _, point in ipairs( points ) do
+		local px, py = unpack( point )
+		local dx, dy = sx - px, sy - py
+		local l2 = dx * dx + dy * dy
+		if l2 < bestDistance then
+			selectedPoint = point
+			bestDistance = l2
 		end
 	end
 end
@@ -55,7 +78,6 @@ end
 ------------------------------------------------------------
 --- Löve2D framework hooks
 
-
 -- Initial initialization.
 function love.load ()
 	log_info( "Starting up.." )
@@ -64,10 +86,19 @@ function love.load ()
 end
 
 
+-- Handle mouse press
+function love.mousepressed( x, y, button, touch, presses )
+  log_info(
+		string.format( "Mouse button pressed: (%i,%i) [%i]", x, y, button) )
+
+	select_closestPoint( x, y )
+end
+
+
 -- Handle key press input as stream of event.
 function love.keypressed( key, scancode, isrepeat )
-	log_info( string.format("Key pressed: %s\t%s\t%s", key, scancode, isrepeat ) )
-
+	log_info(
+		string.format( "Key pressed: %s\t%s\t%s", key, scancode, isrepeat ) )
 end
 
 
@@ -79,7 +110,17 @@ end
 
 -- Render every frame.
 function love.draw ()
+	local g = love.graphics
+
+	-- Draw all the points.
+	g.setColor( 1, 1, 1, 0.75 )
 	for _, point in ipairs( points ) do
 		draw_point( point )
+	end
+
+	-- Draw selected point (if any) in a different color.
+	g.setColor( 1, 1, 0.75, 1 )
+	if selectedPoint then
+		draw_point( selectedPoint )
 	end
 end
