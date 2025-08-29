@@ -55,26 +55,36 @@ function make_initialPoints()
 end
 
 
+-- Find the point among the points closest to the given position.
+--
+-- Limit selection to point "close enough".
+--
+function find_closestPoint( sx, sy)
+	local bestDistance = selectionLimit * selectionLimit
+	local bestIndex, bestPoint = nil, nil
+
+	for index, point in ipairs( points ) do
+		local px, py = unpack( point )
+		local dx, dy = sx - px, sy - py
+		local l2 = dx * dx + dy * dy
+		if l2 < bestDistance then
+			bestDistance = l2
+			bestIndex, bestPoint = index, point
+		end
+	end
+
+	return bestIndex, bestPoint
+end
+
+
 -- Select the point among the points closest to the given position.
 --
 -- Limit selection to point close enough,
 -- and clear selction if nothing was close enough.
 --
-function select_closestPoint( sx, sy)
-	local bestDistance = selectionLimit * selectionLimit
-	selectedPoint = nil
-
-	for _, point in ipairs( points ) do
-		local px, py = unpack( point )
-		local dx, dy = sx - px, sy - py
-		local l2 = dx * dx + dy * dy
-		if l2 < bestDistance then
-			selectedPoint = point
-			bestDistance = l2
-		end
-	end
+function select_closestPoint( sx, sy )
+	_, selectedPoint = find_closestPoint( sx, sy )
 end
-
 
 -- Draw a single point in a way that makes it clearly visble.
 function draw_point( center )
@@ -93,16 +103,26 @@ end
 function love.load ()
 	log_info( "Starting up.." )
 
-	make_initialPoints()
+--	make_initialPoints()
 end
 
 
 -- Handle mouse press
 function love.mousepressed( x, y, button, touch, presses )
 	log_info( string.format(
-		"Mouse button pressed: (%i,%i) [%i]", x, y, button) )
+		"Mouse button pressed: (%i,%i) [%i] [%i]", x, y, button, presses) )
 
-	select_closestPoint( x, y )
+	if presses > 1 then
+		local index, point = find_closestPoint( x, y)
+		if not point and button == 1 then
+			table.insert( points, { x, y } )
+		elseif point and button == 2 then
+			points[index] = points[ #points ]
+			points[ #points ] = nil
+		end
+	else
+		select_closestPoint( x, y )
+	end
 end
 
 
@@ -146,8 +166,9 @@ function love.draw ()
 
 	-- Draw all the points.
 	g.setColor( 1, 1, 1, 0.75 )
-	for _, point in ipairs( points ) do
+	for index, point in ipairs( points ) do
 		draw_point( point )
+		g.print( ("#%i (%i,%i)"):format( index, point[1], point[2] ), 16, 600 - 16 * index )
 	end
 
 	-- Draw selected point (if any) in a different color.
