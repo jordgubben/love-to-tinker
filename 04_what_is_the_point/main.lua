@@ -99,17 +99,38 @@ end
 
 -- Handle mouse press
 function love.mousepressed( x, y, button, touch, presses )
-  log_info(
-		string.format( "Mouse button pressed: (%i,%i) [%i]", x, y, button) )
+	log_info( string.format(
+		"Mouse button pressed: (%i,%i) [%i]", x, y, button) )
 
 	select_closestPoint( x, y )
 end
 
 
+-- Handle mouse movement
+function love.mousemoved( x, y, dx, dy )
+	log_info( string.format(
+		"Mouse moved: (%i,%i) [%i,%i]", x, y, dx, dy ) )
+
+	if selectedPoint then
+		selectedPoint[1] = x
+		selectedPoint[2] = y
+	end
+end
+
+
+-- Handle mouse release
+function love.mousereleased( x, y, button, touch, presses )
+	log_info( string.format(
+		"Mouse button released: (%i,%i) [%i]", x, y, button) )
+
+	selectedPoint = nil
+end
+
+
 -- Handle key press input as stream of event.
 function love.keypressed( key, scancode, isrepeat )
-	log_info(
-		string.format( "Key pressed: %s\t%s\t%s", key, scancode, isrepeat ) )
+	log_info( string.format(
+		"Key pressed: %s\t%s\t%s", key, scancode, isrepeat ) )
 end
 
 
@@ -130,8 +151,18 @@ function love.draw ()
 	end
 
 	-- Draw selected point (if any) in a different color.
-	g.setColor( 1, 1, 0.75, 1 )
 	if selectedPoint then
+		g.setColor( 1, 1, 0.75, 1 )
 		draw_point( selectedPoint )
+	end
+
+	-- Status info (hacker green)
+	g.setColor( 0.5, 1, 0.75, 0.75 )
+	g.print( ("Mouse: (%i,%i)")
+		:format( love.mouse.getPosition() )
+		, 16, 16 )
+	if selectedPoint then
+		local x, y = unpack( selectedPoint )
+		g.print( ("Selected: (%i,%i)"):format( x, y ), 16, 32 )
 	end
 end
