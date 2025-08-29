@@ -30,7 +30,7 @@ selectedPoint = nil
 --
 function funcLocation ( depth )
 	local info = debug.getinfo( (depth or 0) + 2 )
-	return string.format( "%s:%d\t%s()", info.source, info.linedefined, info.name or "<anonymous>" )
+	return string.format( "%s:%d", info.source, info.linedefined )
 end
 
 
